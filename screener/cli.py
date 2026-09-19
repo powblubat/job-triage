@@ -243,7 +243,9 @@ def killed(
 
 @app.command("screen")
 def screen_command(
-    limit: int = typer.Option(None, "--limit", help="Screen only this many, to price a run before committing to it."),
+    # min=1: a negative limit slices from the end, so -1 would screen, and pay
+    # for, every pending job but one.
+    limit: int = typer.Option(None, "--limit", min=1, help="Screen only this many, to price a run before committing to it."),
 ) -> None:
     """Score the pending queue against your profile. This is the step that costs money."""
     _run_screening(_open_db(), limit)
@@ -507,7 +509,7 @@ def _run_screening(conn, limit: int | None = None) -> None:
     if not pending:
         typer.echo("nothing pending to screen")
         return
-    typer.echo(f"screening {min(pending, limit) if limit else pending} of {pending} pending")
+    typer.echo(f"screening {min(pending, limit) if limit is not None else pending} of {pending} pending")
     typer.echo("")
 
     report = screen.screen_pending(conn, client, facts, limit, progress=typer.echo)
