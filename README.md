@@ -1,17 +1,10 @@
 # job-triage
 
-A command-line tool for anyone hunting for IT support work: help desk, desktop
-support, IT specialist, junior sysadmin. It pulls postings from Indeed and kills
-the noise with rules you can read and edit: government contractors, clearance
-requirements, senior titles, trades that happen to be called "technician", and
-jobs that call themselves remote but aren't. It then has Claude score what's
-left against a written profile of your background. You review the rest in the
-terminal, one job per screen.
-
-The scoring is harsh on purpose. A job seeker's judgment gets generous when the
-search drags on, and a screener that tells you every posting is a fit is worse
-than no screener at all. The model may only treat what's in your profile as
-true, and a requirement you don't meet counts against you.
+Command line tool for screening jobs on indeed, setup primarily for entry/mid level IT support.
+Pulls postings from indeed and removes jobs based on set rules. Default rules include
+removing government work with clearance requirements, senior titles, and jobs with titles
+similar like "technician". After pulling and filtering mechanically the jobs are then supplied
+to smaller Claude models (Sonnet and Haiku) via OpenRouter to perform final verification.
 
 ## Requirements
 
