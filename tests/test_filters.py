@@ -177,6 +177,47 @@ def test_a_board_flag_with_no_remote_wording_is_trusted(config):
     assert apply_filters(job, config).remote
 
 
+def test_a_negated_remote_statement_is_not_remote(config):
+    """A real Boston posting. "fully remote" is in it, and read as a plain
+    phrase it made an office job remote anywhere in the US."""
+    job = make_job(
+        location="Boston, MA, US",
+        is_remote=True,
+        description="Hybrid systems administration. This role can not be done fully remote.",
+    )
+    result = apply_filters(job, config)
+    assert not result.remote
+    assert result.killed_by == "location:not-remote"
+
+
+def test_a_remote_statement_after_an_unrelated_no_still_counts(config):
+    """The remote negation is deliberately tighter than the clearance one: a
+    false negation here kills a remote job you wanted."""
+    job = make_job(location="Denver, CO, US", is_remote=True, description="No commute! This role is fully remote.")
+    assert apply_filters(job, config).remote
+
+
+def test_one_remote_day_a_week_is_an_office_job(config):
+    job = make_job(
+        location="Folsom, CA, US",
+        is_remote=True,
+        description=(
+            "This position may be eligible for one remote workday per week. "
+            "Work effectively whether onsite, in a hybrid setting, or fully remote."
+        ),
+    )
+    assert apply_filters(job, config).killed_by == "location:not-remote"
+
+
+def test_a_sites_own_it_person_is_not_remote_whatever_the_location_says(config):
+    job = make_job(
+        location="Remote, US",
+        is_remote=True,
+        description="Serve as the primary onsite IT support resource for an assigned facility.",
+    )
+    assert not apply_filters(job, config).remote
+
+
 def test_loosely_worded_remote_is_kept(config):
     job = make_job(
         location="Grapevine, TX, US",

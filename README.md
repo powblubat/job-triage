@@ -235,7 +235,9 @@ Indeed calls a job remote if the word "remote" appears anywhere in it, so
 of the tag. So the filter asks the posting itself, using the `[remote]` phrase lists. The first match wins:
 
 1. On-site or hybrid wording: not remote, even if it also says remote.
-2. Remote stated outright, or "remote" in the title or location: remote.
+2. Remote stated outright, or "remote" in the title or location: remote. A
+   statement with a negation just before it doesn't count: "this role can not
+   be done fully remote" is not a remote job.
 3. Loose wording ("may be remote, hybrid, or onsite"): kept as remote.
 4. No mention of remote at all: remote, since the tag came from the board's own
    listing data.

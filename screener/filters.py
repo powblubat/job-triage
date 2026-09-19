@@ -166,12 +166,24 @@ def _really_remote(job: Job, rules: RemoteRules) -> bool:
 
     if _phrase_in(description, rules.contradicted_by) or _phrase_in(title, rules.title_contradicted_by):
         return False
-    if _phrase_in(description, rules.stated_by) or _phrase_in(f"{title} | {location}", ("remote",)):
+    if _stated(description, rules.stated_by, rules) or _phrase_in(f"{title} | {location}", ("remote",)):
         return True
-    if _phrase_in(description, rules.loosely_stated_by):
+    if _stated(description, rules.loosely_stated_by, rules):
         return True
     everything = f"{title} {description} {location}"
     return not any(word in everything for word in ("remote", "wfh", "work from home"))
+
+
+def _stated(description: str, phrases: tuple[str, ...], rules: RemoteRules) -> bool:
+    """A remote phrase that isn't negated just before it. "This role can not be
+    done fully remote" contains "fully remote", and read as a plain phrase match
+    it made a Boston office job remote."""
+    cues = matching_pattern(rules.negated_by)
+    for match in matching_pattern(phrases).finditer(description):
+        before = description[max(0, match.start() - rules.negation_window) : match.start()]
+        if not cues.search(before):
+            return True
+    return False
 
 
 def _classify_market(job: Job, remote: bool, config: FilterConfig) -> str | None:

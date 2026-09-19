@@ -42,6 +42,13 @@ def test_a_plural_trade_title_is_still_denied(config):
     assert check("Pool Technicians", config.gate).rule == "pool technician"
 
 
+def test_high_voltage_support_is_not_it(config):
+    """A solar company's "technical support" role, which the allow list let in
+    twenty times over."""
+    assert check("HV Training and Technical Support Specialist", config.gate).rule == "hv"
+    assert check("HVAC Technician", config.gate).rule == "hvac"
+
+
 def test_an_optional_plural_does_not_match_a_longer_word(config):
     """The boundary after the optional "s" is what keeps the trailing s from
     turning every phrase into a prefix match."""

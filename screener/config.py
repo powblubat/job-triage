@@ -66,6 +66,17 @@ class RemoteRules:
     title_contradicted_by: tuple[str, ...]
     stated_by: tuple[str, ...]
     loosely_stated_by: tuple[str, ...]
+    # A remote statement with one of these just before it doesn't count:
+    # "this role can not be done fully remote".
+    negated_by: tuple[str, ...] = ()
+    negation_window: int = 0
+
+
+# For a filters.toml written before the remote check knew about negation. Kept
+# short and tight on purpose: a negated statement pushes a job toward being
+# killed, so a loose cue like "no" ("No commute! Fully remote.") costs real jobs.
+REMOTE_NEGATED_BY = ("not", "cannot", "can't", "never", "isn't", "aren't", "won't")
+REMOTE_NEGATION_WINDOW = 25
 
 
 AMBIGUOUS_MODES = ("classify", "kill", "keep")
@@ -204,6 +215,8 @@ def load_filters(path: Path, searches: SearchConfig) -> FilterConfig:
             title_contradicted_by=tuple(remote["title_contradicted_by"]),
             stated_by=tuple(remote["stated_by"]),
             loosely_stated_by=tuple(remote["loosely_stated_by"]),
+            negated_by=tuple(remote.get("negated_by", REMOTE_NEGATED_BY)),
+            negation_window=int(remote.get("negation_window", REMOTE_NEGATION_WINDOW)),
         ),
         gate=GateRules(
             # A title you chose to search for can't then die as ambiguous.

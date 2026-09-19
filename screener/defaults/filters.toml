@@ -274,6 +274,8 @@ deny = [
   "grant specialist", "safety specialist", "csr", "communication specialist",
   "production specialist", "temperature control", "mobile van", "trucks",
   "retail display", "field installation", "drilling", "deer",
+  # High-voltage electrical: solar and utility "technical support" roles.
+  "hv", "high voltage",
 ]
 
 [location]
@@ -352,6 +354,10 @@ contradicted_by = [
   # LinkedIn's #LI- workplace tags and Indeed's "Work Location:" line
   "li onsite", "li hybrid",
   "work location: in person", "work location: hybrid", "work location: on the road",
+  # a remote day as a perk means the rest are in the office
+  "remote workday", "remote work day", "remote day per week", "remote days per week",
+  # the job is a site's own IT person, whatever the listing's location says
+  "primary onsite", "primary on site",
 ]
 
 # Checked against the title alone. Kept short: in a description these words turn
@@ -369,3 +375,12 @@ stated_by = [
 loosely_stated_by = [
   "remote eligible", "may be remote", "remote, hybrid", "remote or hybrid", "remote/hybrid",
 ]
+
+# A stated_by or loosely_stated_by phrase doesn't count when one of these sits
+# within `negation_window` characters before it: "this role can not be done
+# fully remote". Kept shorter and tighter than the kill keywords' negation on
+# purpose. There, a false negation keeps a job you'd toss. Here, it kills a
+# remote job you wanted, so a loose cue like "no" ("No commute! Fully remote.")
+# stays off this list.
+negated_by = ["not", "cannot", "can't", "never", "isn't", "aren't", "won't"]
+negation_window = 25

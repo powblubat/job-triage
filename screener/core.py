@@ -159,6 +159,13 @@ def run_pull(
                     continue
 
                 result = evaluate(job, filter_config, classifier, report)
+                # A really-remote job is the same job whichever city the listing
+                # names. Only really-remote: a board's "remote" that isn't can be
+                # a different job in each city, and the DC one must not be hidden
+                # behind a killed copy from somewhere else.
+                if result.remote and db.has_remote_twin(conn, job):
+                    report.duplicates += 1
+                    continue
                 db.insert_job(conn, job, result, search.term)
 
                 if result.killed:

@@ -111,6 +111,23 @@ def known_fingerprints(conn: sqlite3.Connection) -> set[str]:
     return {row["fingerprint"] for row in conn.execute("SELECT fingerprint FROM jobs")}
 
 
+def has_remote_twin(conn: sqlite3.Connection, job: Job) -> bool:
+    """Whether a remote job with this title and company is already stored.
+
+    The fingerprint includes the location, which is right for on-site work and
+    wrong for remote: one remote posting listed in twenty state capitals hashed
+    as twenty jobs and filled the review queue with copies.
+    """
+    return conn.execute(
+        "SELECT 1 FROM jobs WHERE remote = 1 AND lower(title) = ? AND lower(company) = ? LIMIT 1",
+        (_normalized(job.title), _normalized(job.company)),
+    ).fetchone() is not None
+
+
+def _normalized(value: str | None) -> str:
+    return " ".join((value or "").split()).lower()
+
+
 def record_repeat(conn: sqlite3.Connection, fingerprint: str) -> None:
     """Count a posting the boards have listed again.
 
@@ -236,7 +253,14 @@ def save_verdict(
 
 
 def pending_jobs(conn: sqlite3.Connection) -> list[sqlite3.Row]:
-    return list(conn.execute("SELECT * FROM jobs WHERE stage = ? ORDER BY id", (STAGE_PENDING,)))
+    """Jobs waiting for a fit score. Only ones you haven't decided on, or have
+    saved: scoring a job you already tossed, applied to or saw expire is money
+    spent on a verdict nobody will read. They stay pending, so changing the mark
+    back to new puts them in line again."""
+    return list(conn.execute(
+        "SELECT * FROM jobs WHERE stage = ? AND status IN ('new', 'saved') ORDER BY id",
+        (STAGE_PENDING,),
+    ))
 
 
 def get_job(conn: sqlite3.Connection, job_id: int) -> sqlite3.Row | None:
