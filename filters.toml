@@ -1,0 +1,371 @@
+# Hard filter rules. Edit this file, not Python — it is re-read on every run.
+#
+# Nothing here calls the API. This is the cost-control pass: most rows die here,
+# which also means a bad rule shows up as a job you never saw rather than as an
+# error. Change something, then run `screener stats` to see what it did.
+
+[companies]
+# Matched case-insensitively against the company field on word boundaries, so
+# "Booz Allen" catches "Booz Allen Hamilton" while "Jacobs" won't catch "Jacobsen".
+blocklist = [
+  "Planet Fitness",    # their "Service Desk" is the front counter
+]
+
+[keywords]
+# One unnegated match anywhere in title or description kills the row. The
+# clearance keywords live in [govcon] below, so they can be switched off as a group.
+kill = []
+
+# Matched against the title only, no negation window. These are the roles that
+# aren't yours: senior, lead and management titles, and the developer/architect/
+# engineering specialties the wider Indeed searches drag in. Bare "engineer" is
+# deliberately absent: "Application Support Engineer" is a help desk job.
+# Remove "senior" and "sr" if you'd rather see those and toss them yourself.
+title_kill = [
+  "developer", "software engineer", "architect", "devops",
+  "cloud engineer", "network engineer", "security engineer", "data engineer",
+  "cyber", "servicenow", "consultant", "ai engineer", "platform engineer",
+  "business analyst", "exploitation",
+  "senior", "sr", "lead", "principal", "manager", "director",
+  "intern", "internship", "recruiter", "sales", "driver",
+]
+
+# A match is ignored when one of these appears within `window_chars` BEFORE it.
+# Without this, "no security clearance required" — which is exactly the posting
+# you want — gets killed by the same rule that kills the GovCon reposts.
+negation_before = [
+  "no", "not", "non", "without", "never", "lack of",
+  "don't", "doesn't", "does not", "isn't", "is not", "aren't", "are not",
+  # "ability to obtain a Public Trust" means the employer will sponsor one you
+  # don't hold yet, so the posting is open to you. Delete these four lines if you
+  # decide you'd rather never see sponsor-to-obtain roles at all.
+  "ability to obtain", "able to obtain", "eligible to obtain",
+  "willing to obtain", "willingness to obtain",
+]
+
+# ...or within `window_chars` AFTER it, for the "clearance is not required" shape.
+negation_after = [
+  "not required", "is not required", "isn't required",
+  "not needed", "not necessary", "not mandatory",
+  "none",   # "Clearance type: None"
+]
+
+# How far either side of a match to look for a negation cue. Wider = more jobs
+# survive that should have died; narrower = more good jobs get killed silently.
+window_chars = 60
+
+[govcon]
+# Government contractors and cleared work. On, it kills every employer and
+# keyword below, which suits anyone without a security clearance: in a federal
+# market most IT postings need one, and the same roles get reposted weekly.
+# Off, they reach the queue like any other job. Flip it with `screener govcon on`
+# or `screener govcon off`, then run `screener refilter` to apply it to stored jobs.
+enabled = true
+
+# Employers, matched like [companies] blocklist.
+blocklist = [
+  "Leidos",
+  "Booz Allen",
+  "CACI",
+  "SAIC",
+  "Deloitte",
+  "General Dynamics",
+  "ManTech",
+  "Peraton",
+  "Accenture Federal",
+  "Amentum",
+  "Jacobs",
+  "Parsons",
+  "DXC",
+  "Trace Systems",
+  "DecisionPoint",
+  "Base-2 Solutions",
+
+  # Alaska Native Corporation subsidiaries. They exist to hold set-aside federal
+  # contracts, so nearly every IT role sits on a government site.
+  "Koniag",
+  "Chenega",
+  "ASRC Federal",
+  "Doyon",
+  "Bering",           # Bering-Alaka'ina, Bering Straits
+  "Tatitlek",
+  "Bowhead",
+  "Cherokee Federal",
+  "Akima",
+  "Alutiiq",
+  "Nakupuna",
+
+  # Defense and federal IT primes and mid-tiers.
+  "KBR",
+  "Lockheed Martin",
+  "Northrop Grumman",
+  "HII",              # Mission Technologies, a division of HII
+  "Raytheon",
+  "RTX",
+  "L3Harris",
+  "BAE Systems",
+  "Serco",
+  "CGI Federal",
+  "Guidehouse",
+  "MITRE",
+  "Noblis",
+  "Aerospace Corporation",
+  "Battelle",
+  "LMI",
+  "Arcfield",
+  "V2X",
+  "SOSi",
+  "Tyto Athene",
+  "Sev1Tech",
+  "Steampunk",
+  "Agile Defense",
+  "ECS Federal",
+  "ASM Research",
+  "Credence Management",
+  "Systems Planning and Analysis",
+  "Applied Physics Laboratory",   # JHU APL; the university itself is not blocked
+  "Cognosante",
+  "Nightwing",
+  "BigBear",
+  "VTG",
+  "TekSynap",
+  "Iron Bow",
+  "GovCIO",
+  "Empower AI",
+  "American Systems",
+  "Zachary Piper",    # not bare "Piper": Piper Companies is commercial staffing
+  "Dexian Government",
+  "Belay Technologies",
+  "Synergy ECP",
+  "Altamira",
+  "SMX",
+  "Unison",
+  "Kentro",
+  "Institute for Defense Analyses",
+  "CNA Corporation",
+  "Strategic Analysis",
+  "Tesla Laboratories",
+
+  # The agencies themselves. Every IT job at these needs TS/SCI, and Adzuna's
+  # 500-character snippet ends before the posting says so.
+  "National Security Agency",
+  "Central Intelligence Agency",
+  "Defense Intelligence Agency",
+  "National Geospatial-Intelligence Agency",
+  "National Reconnaissance Office",
+
+  # Small DC-area firms whose postings and sites are all federal.
+  "Edgewater Federal",
+  "LinTech",
+  "Constellation West",
+  "Delmock",
+  "DirectViz",
+  "Lawelawe",
+  "TJFACT",
+  "BRMi",
+  "TCG",
+  "Sharp Solutions",
+  "Govan Systems",
+  "Open Systems Technologies",
+  "BTS Software",
+  "Executive 1",
+  "Integrity Management Services",
+  "RER Solutions",
+  "Space Kinetic",
+  "Bespoke Technologies",
+
+  # Borderline: federal-heavy, but with real commercial work. Uncomment to block.
+  # "Red River",        # their corporate IT role is commercial
+  # "Maximus",          # state Medicaid and CMS call centers, Public Trust at most
+  # "M.C. Dean",        # electrical and security systems, commercial too
+  # "DMI",              # federal and commercial about evenly
+  # "Frederick National Laboratory",  # run by Leidos Biomedical, but NCI research
+]
+
+# Keywords, matched like [keywords] kill: negation-aware, so "no clearance
+# required" and "ability to obtain a clearance" survive.
+kill = [
+  "security clearance",
+  "active clearance",
+  "Secret",
+  "Top Secret",
+  "TS/SCI",
+  "polygraph",
+  "Public Trust",
+  "suitability determination",
+  # Bare "clearance" is the catch-all: "active TS (SCI eligibility) clearance"
+  # got past every phrase above. Still negation-aware, so "no clearance
+  # required" and "ability to obtain a clearance" survive.
+  "clearance",
+  "SCI",
+  "cleared",
+  "CI poly",
+  "full scope poly",
+
+  # Classified facilities, and the DoD cyber workforce certs that only ever
+  # accompany cleared federal work. These reach the queue when an aggregator
+  # hides the employer: one arrived titled "Helpdesk Specialist Tier 2" from
+  # "Career Listings", with a Leidos DOD contract in the body, so neither the
+  # company blocklist nor any clearance phrase above could see it.
+  # "SCIF" needs its own entry: the word boundary after "SCI" cannot match it.
+  "SCIF",
+  "8140",
+  "8570",
+  "IAT Level",
+]
+
+[gate]
+# The relevance gate: is this an IT job at all? Runs on the title, before the
+# kill rules, so a forklift apprentice is counted as "not IT" rather than
+# "wrong location". Three outcomes:
+#   deny  -> killed as gate:<pattern>. Deny wins over allow.
+#   allow -> goes on to the kill rules.
+#   neither ("Technician Apprentice", "Specialist II") -> `ambiguous` decides:
+#     classify: one cheap Haiku call asking only "is this an IT support role?",
+#               cached by title so the same title never costs twice. Needs
+#               OPENROUTER_API_KEY in .env; without it the job is kept.
+#     kill:     killed as gate:ambiguous.
+#     keep:     goes on to the kill rules.
+# Every gate kill is stored with the pattern that matched, and
+# `screener killed --since 7d` lists them by title. Check it after a pull: a
+# missing allow word means a job you wanted died without a sound.
+ambiguous = "classify"
+
+allow = [
+  "help desk", "helpdesk", "service desk", "desktop", "deskside",
+  "it support", "it specialist", "it technician", "it analyst", "it associate",
+  "it assistant", "it coordinator", "it administrator", "it generalist",
+  "it operations", "it tech", "it field", "it",
+  "information technology", "information systems",
+  "technical support", "tech support", "technology support",
+  "end user", "user support", "support specialist", "support technician",
+  "support analyst", "support engineer", "production support",
+  "systems administrator", "system administrator", "sysadmin",
+  "systems engineer", "systems analyst", "systems specialist", "systems technician",
+  "microsoft 365", "m365", "office 365", "intune", "active directory", "windows",
+  "workstation", "endpoint", "computer", "network", "hardware", "infrastructure",
+  "tier 1", "tier 2", "tier 3", "tier i", "tier ii", "tier iii", "level 1", "level 2",
+  "data center technician", "pc technician", "audio visual", "av technician",
+  "technology specialist", "technology technician", "technology analyst",
+  "technology associate", "technical services", "field engineer", "automation",
+  "geek squad", "noc",
+]
+
+# Specific phrases where a bare word could hit a real IT job: hospitals hire
+# pharmacy IT, so "pharmacy technician" rather than "pharmacy".
+deny = [
+  "hvac", "pool technician", "pool service", "spa", "mechanic", "automotive",
+  "diesel", "plumbing", "plumber", "electrician", "electrical technician",
+  "electronics technician", "electronics assembly", "maintenance technician",
+  "facilities technician", "calibration", "compressor", "crane", "forklift",
+  "lift truck", "truck", "ev charging", "solar", "pest",
+  "survey", "geotechnical", "construction", "landscape",
+  "pharmacy technician", "veterinary", "dental front desk", "dental assistant",
+  "medical receptionist", "medical office", "medical assistant",
+  "patient access", "patient service", "patient care", "patient experience",
+  "nurse", "clinical", "biomed",
+  "front desk", "receptionist", "concierge", "hotel", "guest services",
+  "night audit", "night auditor", "cashier", "warehouse", "driver",
+  "target security", "security officer", "loss prevention", "fire and rescue",
+  # "service desk" is also what gyms and department stores call the counter.
+  "customer service desk", "cash office", "member services",
+  # clerical and other non-IT titles that carried "specialist" or "technician"
+  "administrative", "admin assistant", "clerk", "data entry", "finance",
+  "grant specialist", "safety specialist", "csr", "communication specialist",
+  "production specialist", "temperature control", "mobile van", "trucks",
+  "retail display", "field installation", "drilling", "deer",
+]
+
+[location]
+# Which places are kept is set per location in searches.toml (each [[locations]]
+# block's `match` list), so a place you search is never a place this file kills.
+# `screener locations add` keeps the two in step.
+
+keep_remote_us = true
+
+# Tokens that mean a "remote" posting isn't a US role after all.
+foreign_markers = [
+  "canada", "united kingdom", "india", "philippines", "mexico",
+  "germany", "ireland", "australia", "poland", "brazil",
+]
+
+# The flag on jobs from a `market = "secondary"` location: kept, tagged, and
+# held out of the default review queue.
+secondary_tag = "secondary-market"
+
+[flags.salary]
+low_pay_below = 65000
+
+[flags.contract]
+# JobSpy's own job_type values that mean contract work.
+job_types = ["contract", "temporary"]
+
+[[flags.keyword]]
+flag = "shift-risk"
+keywords = [
+  "rotating shift", "overnight", "night shift", "12-hour",
+  "on-call rotation", "swing shift", "graveyard shift",
+]
+
+[[flags.keyword]]
+flag = "contract"
+keywords = [
+  "contract-to-hire", "contract to hire", "c2h",
+  "corp-to-corp", "w2 contract", "1099",
+]
+
+[remote]
+# LinkedIn and Indeed both call a job remote if the word "remote" appears anywhere
+# in it, so "provide onsite and remote support" is enough to get the tag. These
+# lists decide whether a remote-tagged job really is remote. First match wins:
+#   contradicted_by -> not remote, even if it also says remote somewhere
+#   stated_by, or "remote" in the title or location -> remote
+#   loosely_stated_by -> remote (the safe direction: you read it and toss it)
+#   no mention of remote at all -> remote (the board's own listing data said so)
+#   anything else -> not remote
+# A job that isn't really remote goes through the normal location rule: kept in
+# one of your locations, killed as "location:not-remote" anywhere else.
+#
+# Matching ignores case, markdown and hyphens, so "on site" also catches "On-Site".
+# After editing, `screener refilter --dry-run` shows what the change would do.
+
+contradicted_by = [
+  # the arrangement stated outright
+  "onsite position", "on site position", "onsite role", "on site role",
+  "onsite opportunity", "on site opportunity", "onsite job", "on site job",
+  "fully onsite", "fully on site", "100% onsite", "100% on site",
+  "full time onsite", "full time on site", "100% work from office",
+  "must be onsite", "must be on site", "required to be onsite", "required to be on site",
+  "ability to work onsite", "ability to work on site",
+  "work onsite at", "work on site at", "working onsite at", "report to the office",
+  "in office position", "in office role", "in office requirement",
+  # days in the office
+  "days onsite", "days on site", "days in office", "days in the office",
+  "a week onsite", "a week on site", "a week in the office", "per week in the office",
+  "days per week onsite", "days per week on site",
+  "work remotely one day", "work remotely two days", "work remotely 1", "work remotely 2",
+  # hybrid
+  "hybrid role", "hybrid position", "hybrid schedule", "hybrid work schedule",
+  "hybrid opportunity", "hybrid arrangement", "hybrid work model",
+  # said plainly
+  "not a remote", "not remote", "no remote", "not eligible for remote", "remote work is not",
+  # LinkedIn's #LI- workplace tags and Indeed's "Work Location:" line
+  "li onsite", "li hybrid",
+  "work location: in person", "work location: hybrid", "work location: on the road",
+]
+
+# Checked against the title alone. Kept short: in a description these words turn
+# up in duty lists ("assist with onsite projects"), in a title they don't.
+title_contradicted_by = ["onsite", "on site", "hybrid", "in office"]
+
+stated_by = [
+  "fully remote", "100% remote", "remote position", "remote role", "remote job",
+  "remote opportunity", "this role is remote", "position is remote", "job is remote",
+  "work from home", "work from anywhere", "remote first", "remote based", "home based",
+  "telecommute", "work remotely from", "remote in the us", "remote within the us",
+  "remote, us", "remote (us", "work location: remote", "location: remote", "li remote",
+]
+
+loosely_stated_by = [
+  "remote eligible", "may be remote", "remote, hybrid", "remote or hybrid", "remote/hybrid",
+]

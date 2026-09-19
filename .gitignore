@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.env
+jobs.db
+.venv/
+*.egg-info/
+exports/
+jobs-backup-*.db
+profile/facts.md
+.pytest_cache/

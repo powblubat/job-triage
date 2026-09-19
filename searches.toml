@@ -1,0 +1,80 @@
+# What the pull searches for, and where. Every title is searched in every
+# location. Manage both from the command line, which keeps these comments intact:
+#
+#   screener titles add "network administrator"
+#   screener titles remove deskside
+#   screener locations add "Austin, TX"
+#
+# or edit this file by hand. Either way, `screener refilter` applies the change
+# to jobs already stored.
+
+[defaults]
+# The JobSpy boards. Indeed is the only one that still works; the README's
+# "Sources" section has the history of the others. Adzuna is configured below.
+sites = ["indeed"]
+results_wanted = 80        # per query, per location
+hours_old = 168            # one week
+country_indeed = "usa"
+
+[search]
+# Searched with Indeed's title:(...) operator, so a title only matches job
+# titles. A bare term searches the whole posting: "help desk" returned
+# attorneys whose boilerplate said "contact the help desk".
+#
+# A title here is also let through the relevance gate in filters.toml, so a
+# job you asked for can't be thrown out as "not an IT job".
+titles = [
+  "help desk", "helpdesk", "service desk",
+  "desktop support", "deskside support", "deskside", "end user support", "end user",
+  "IT support", "IT specialist", "IT technician", "IT analyst", "IT field technician",
+  "technical support specialist", "technical support", "tech support",
+  "Microsoft 365", "M365", "Intune", "systems administrator",
+]
+
+# How many titles are OR'd into one query. Each query returns at most
+# results_wanted jobs, so fewer per query finds more but makes the pull slower:
+# the pull runs (titles / titles_per_search) x locations queries.
+titles_per_search = 5
+
+# Each location is one place to search. `match` lists the location tokens that
+# keep a posting: JobSpy writes locations as "City, ST, Country", and a posting
+# survives when one comma-separated part equals a token. Indeed's radius crosses
+# state lines, so a metro usually needs its neighbouring states or suburbs.
+#
+#   remote = true          search remote jobs; kept anywhere in the US
+#   market = "secondary"   kept but tagged, and held out of the default queue
+
+[[locations]]
+name = "Washington, DC"
+match = [
+  "dc", "district of columbia",
+  "md", "maryland",
+  "va", "virginia",
+]
+
+[[locations]]
+name = "United States"
+remote = true
+
+[[locations]]
+name = "Los Angeles, CA"
+market = "secondary"
+# City names only. A bare "ca" would make the whole state the market:
+# Emeryville and Sacramento are not Los Angeles.
+match = [
+  "los angeles", "pasadena", "glendale", "burbank", "santa monica",
+  "long beach", "el segundo", "torrance", "culver city", "inglewood",
+  "santa clarita", "north hollywood", "sherman oaks", "van nuys",
+  "alhambra", "arcadia", "monrovia", "el monte", "downey", "carson",
+]
+
+[adzuna]
+# Off. Adzuna returns only the first 500 characters of a posting and has no
+# endpoint for the rest, so its jobs reach the review screen with no
+# requirements to read, and the screening pass would pay for verdicts on stubs.
+# Flip to true if Adzuna ever ships full descriptions.
+#
+# When on: official API, personal-research terms (250 hits a day, a pull is
+# about 20), keys in .env as ADZUNA_APP_ID and ADZUNA_APP_KEY, and only the
+# non-remote locations run through it.
+enabled = false
