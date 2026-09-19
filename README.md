@@ -24,30 +24,44 @@ true, and a requirement you don't meet counts against you.
 
 ## Install
 
+With [pipx](https://pipx.pypa.io), which gives the tool its own environment and
+puts the `screener` command on your PATH:
+
 ```bash
-git clone https://github.com/powblubat/job-triage.git
-cd job-triage
-python -m venv .venv
-.venv\Scripts\activate          # Windows
-source .venv/bin/activate       # macOS / Linux
-pip install -e .
+pipx install git+https://github.com/powblubat/job-triage
+screener init
 ```
 
-The command is `screener`, and it works from any folder. It finds its config by walking up from
-the current folder looking for `filters.toml`, then falls back to the folder it
-was installed from. Set `SCREENER_HOME` to point it somewhere else. The job
-database, `jobs.db`, is always created next to `filters.toml`.
+No pipx yet? `python -m pip install --user pipx`, then `python -m pipx ensurepath`,
+then open a new terminal. With [uv](https://docs.astral.sh/uv/) instead:
+`uv tool install git+https://github.com/powblubat/job-triage`.
+
+`screener` then works in any terminal, from any folder. There's no virtual
+environment to activate. Update with `pipx upgrade job-triage`.
+
+`screener init` creates your home folder and fills it with starting files:
+
+- `%APPDATA%\job-triage` on Windows
+- `~/.config/job-triage` on macOS and Linux
+
+`screener home` prints the path, and `screener home --open` opens it. Your
+config, your profile, your API keys and the job database all live there. Set
+`SCREENER_HOME` to use a different folder.
+
+Upgrading never touches that folder. Your `filters.toml` is your copy, so rules
+added to the defaults in a later version won't appear in it by themselves.
 
 ## Quickstart
 
-1. **Keys.** Copy `.env.example` to `.env` and paste your OpenRouter key in.
+1. **Keys.** Run `screener home --open` and paste your OpenRouter key into
+   `.env`.
 
-2. **Your profile.** Copy `profile/facts.example.md` to `profile/facts.md` and
-   fill it in. This file is everything the screener may believe about you, so
-   be specific and be honest. Give scope in numbers, say which projects you led
-   and which you only helped with, and use the "What this is not" section to
-   name the ways your background tends to get inflated. What you leave out is
-   scored as a gap. Git ignores `facts.md`.
+2. **Your profile.** In the same folder, replace `profile/facts.md` with your
+   own background. Screening refuses to run until you do. This file is
+   everything the screener may believe about you, so be specific and be honest.
+   Give scope in numbers, say which projects you led and which you only helped
+   with, and use the "What this is not" section to name the ways your
+   background tends to get inflated. What you leave out is scored as a gap.
 
 3. **What to search for.** The shipped config searches for entry-level IT
    support titles in Washington, DC, remote US jobs, and Los Angeles as a
@@ -86,6 +100,9 @@ database, `jobs.db`, is always created next to `filters.toml`.
 ## Commands
 
 ```
+screener init                       # set up your home folder; never overwrites
+screener home [--open]              # where your config and jobs live
+
 screener pull                       # search -> filter -> store -> score
 screener pull --no-screen           # same, without the paid scoring step
 screener screen [--limit N]         # score whatever is still pending
@@ -112,7 +129,8 @@ screener refilter                   # apply it; your marks are never changed
 
 ## Configuring
 
-The config is two TOML files, and they're commented throughout. The commands
+The config is two TOML files in your home folder (`screener home`), and
+they're commented throughout. The commands
 above edit them for you and leave the comments intact, or you can edit them by
 hand. Either way, a change reaches new jobs on the next pull. Run
 `screener refilter` to apply it to jobs you already have.
@@ -253,19 +271,31 @@ runs 12 queries per pull.
 
 ## Privacy
 
-Everything stays on your machine except the model calls. `jobs.db`, `.env`,
-`profile/facts.md` and `exports/` are all git-ignored. Screening sends your
+Everything stays in your home folder on your machine except the model calls:
+`jobs.db`, `.env`, `profile/facts.md` and `exports/`. Screening sends your
 facts file and each posting to OpenRouter, which forwards them to Anthropic.
 The classify step sends only a job title and the start of its description.
 
 ## Where things live
+
+In your home folder (`screener home`):
 
 | File | What it does |
 |---|---|
 | `searches.toml` | Titles, locations, and the job board settings. |
 | `filters.toml` | Every kill and flag rule, the gate, and the govcon switch. |
 | `profile/facts.md` | Your background: the only thing the screener may believe. |
-| `screener/config.py` | Reads the two TOML files into typed config, and builds the queries. |
+| `.env` | Your API keys. |
+| `jobs.db` | Every job pulled, killed or kept, and what you marked it. |
+| `exports/` | Where `screener export` writes. |
+
+In the code:
+
+| File | What it does |
+|---|---|
+| `screener/defaults/` | The starting files `screener init` copies into your home folder. |
+| `screener/setup.py` | `screener init`. It never overwrites a file. |
+| `screener/config.py` | Finds the home folder, reads the two TOML files and builds the queries. |
 | `screener/settings.py` | The CLI's edits to those files, comments preserved. |
 | `screener/ingest.py` | The only module that knows JobSpy exists. |
 | `screener/gate.py` | The relevance gate: is this an IT job at all? |
@@ -278,18 +308,26 @@ The classify step sends only a job title and the start of its description.
 | `screener/triage.py` | The `review` loop. |
 | `screener/cli.py` | The commands. |
 
-## Tests
+## Development
 
 ```bash
+git clone https://github.com/powblubat/job-triage.git
+cd job-triage
+python -m venv .venv
+.venv\Scripts\activate          # Windows
+source .venv/bin/activate       # macOS / Linux
 pip install -e ".[dev]"
 pytest
 ```
 
-The filter tests run against the real `filters.toml` and `searches.toml`, not
-fixture copies. That way they catch a tuning mistake in the shipped config, not
-just a bug in the matching code. If you retune the config for your own search,
-expect a few of them to fail, and read what they're guarding before you change
-them.
+The installed `screener` still uses your real home folder. Set `SCREENER_HOME`
+to a scratch folder and run `screener init` there to try changes without
+touching your jobs. If you installed with pipx, `pipx install -e .` from the
+clone makes the global `screener` run your working copy.
+
+The filter tests run against the shipped defaults in `screener/defaults/`, not
+fixture copies. That way they catch a tuning mistake in the config every new
+user starts with, not just a bug in the matching code.
 
 ## License
 

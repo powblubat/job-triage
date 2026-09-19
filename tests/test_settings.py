@@ -16,7 +16,7 @@ from screener.filters import apply_filters
 from screener.gate import ALLOW, AMBIGUOUS, check
 from screener.models import Job
 
-ROOT = Path(__file__).parent.parent
+DEFAULTS = Path(__file__).parent.parent / "screener" / "defaults"
 
 
 @pytest.fixture
@@ -24,7 +24,7 @@ def home(tmp_path):
     """Copies of the real config files, so the CLI's edits can be tested on
     exactly the files a user has."""
     for name in ("filters.toml", "searches.toml"):
-        shutil.copy(ROOT / name, tmp_path / name)
+        shutil.copy(DEFAULTS / name, tmp_path / name)
     return tmp_path
 
 

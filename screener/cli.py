@@ -12,8 +12,8 @@ from pathlib import Path
 
 import typer
 
-from screener import core, db, display, export, llm, screen, settings, triage
-from screener.config import FILTERS_FILE, SEARCHES_FILE, ProjectRootNotFound, project_root
+from screener import core, db, display, export, llm, screen, settings, setup, triage
+from screener.config import FILTERS_FILE, SEARCHES_FILE, HomeNotFound, home, user_home
 
 app = typer.Typer(add_completion=False, help="Pull IT job postings, kill the noise, review the rest.")
 
@@ -307,6 +307,36 @@ def filters() -> None:
     typer.echo(f"  low-pay:  below ${filter_config.low_pay_below:,.0f}/yr")
 
 
+@app.command()
+def init(open_folder: bool = typer.Option(False, "--open", help="Open the folder afterwards.")) -> None:
+    """Set up your config folder. Safe to run again: it never overwrites a file."""
+    folder = user_home()
+    results = setup.init(folder)
+    typer.echo(f"home  {folder}\n")
+    for path, outcome in results:
+        typer.echo(f"  {outcome:<8} {path.relative_to(folder)}")
+
+    if any(outcome == setup.CREATED for _, outcome in results):
+        typer.echo("\nnext:")
+        typer.echo(f"  1. put your OpenRouter key in {folder / setup.ENV_FILE}")
+        typer.echo(f"  2. fill in {folder / setup.FACTS_FILE} with your own background")
+        typer.echo("  3. screener titles / screener locations, to set what to search for")
+        typer.echo("  4. screener pull, then screener review")
+    if open_folder:
+        typer.launch(str(folder))
+
+
+@app.command("home")
+def home_command(open_folder: bool = typer.Option(False, "--open", help="Open it in the file manager.")) -> None:
+    """Where your config, profile and jobs.db live."""
+    folder = user_home()
+    typer.echo(str(folder))
+    if not (folder / FILTERS_FILE).is_file():
+        typer.secho('not set up yet: run "screener init"', fg=typer.colors.YELLOW)
+    elif open_folder:
+        typer.launch(str(folder))
+
+
 titles_app = typer.Typer(help="The job titles the pull searches for.")
 locations_app = typer.Typer(help="Where the pull searches, and which postings the location rule keeps.")
 app.add_typer(titles_app, name="titles")
@@ -496,8 +526,8 @@ def _root() -> Path:
     """Resolved per command rather than at import, so a missing filters.toml
     prints one line instead of a traceback from the import machinery."""
     try:
-        return project_root()
-    except ProjectRootNotFound as error:
+        return home()
+    except HomeNotFound as error:
         typer.secho(str(error), fg=typer.colors.RED)
         raise typer.Exit(code=1) from error
 

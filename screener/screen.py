@@ -16,10 +16,10 @@ from pathlib import Path
 
 from screener import db, llm
 from screener.models import Job
+from screener.setup import FACTS_FILE, default_text
 
-FACTS_FILE = "profile/facts.md"
-# Git ignores the real one: it is a full description of your working life.
-EXAMPLE_FILE = "profile/facts.example.md"
+# The template `screener init` writes as facts.md, to be filled in place.
+EXAMPLE_FILE = "facts.example.md"
 
 # Long postings are mostly boilerplate: benefits, EEO statements, "about us".
 # The requirements are near the top, and this keeps a 20,000-character posting
@@ -112,9 +112,18 @@ class ProfileNotFound(Exception):
 
 def load_facts(root: Path) -> str:
     path = root / FACTS_FILE
-    if not path.is_file() or not path.read_text(encoding="utf-8").strip():
-        raise ProfileNotFound(f"{FACTS_FILE} is missing or empty; copy {EXAMPLE_FILE} and fill it in")
-    return path.read_text(encoding="utf-8").strip()
+    facts = path.read_text(encoding="utf-8").strip() if path.is_file() else ""
+    if not facts:
+        raise ProfileNotFound(f'{path} is missing or empty; run "screener init" and fill it in')
+    # init writes the template itself as facts.md. Screening against it is the
+    # same failure as an empty profile, only quieter.
+    if _same_text(facts, default_text(EXAMPLE_FILE)):
+        raise ProfileNotFound(f"{path} is still the template; fill it in with your own background")
+    return facts
+
+
+def _same_text(a: str, b: str) -> bool:
+    return a.replace("\r\n", "\n").strip() == b.replace("\r\n", "\n").strip()
 
 
 def screen_job(client: llm.Client, job: Job, facts: str) -> tuple[Verdict | None, llm.Reply | None]:

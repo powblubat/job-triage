@@ -1,8 +1,8 @@
 # Facts
 
-Copy this to `profile/facts.md` and replace it with your own. Git ignores
-`facts.md`; only this example is committed, because the real one is a fairly
-complete description of your working life.
+Replace everything in this file with your own background. Screening refuses
+to run until you do. It stays on your machine, apart from being sent with each
+posting to the model that scores it.
 
 This file is the only thing the screener may treat as true about you, and it is
 what cover letter drafts will be allowed to claim. If a posting asks for

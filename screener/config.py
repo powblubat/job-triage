@@ -16,39 +16,37 @@ from dotenv import load_dotenv
 
 FILTERS_FILE = "filters.toml"
 SEARCHES_FILE = "searches.toml"
+APP_NAME = "job-triage"
 
 
-class ProjectRootNotFound(Exception):
-    """Raised when filters.toml can't be located from where the command ran."""
+class HomeNotFound(Exception):
+    """Raised when the home folder has no config yet: `screener init` makes one."""
 
 
-def project_root() -> Path:
-    """Find the folder holding filters.toml, searches.toml and jobs.db.
+def user_home() -> Path:
+    """Where your config and data live: SCREENER_HOME if it's set, otherwise
+    %APPDATA%\\job-triage on Windows and ~/.config/job-triage elsewhere.
 
-    Deliberately not `Path.cwd()`. Anchoring to the working directory means the
-    command only works from one folder, and — worse than an error — running it
-    from elsewhere would quietly open a second, empty jobs.db instead of yours.
+    Deliberately not the working directory, and not next to the code. The first
+    means the command only works from one folder, and running it from anywhere
+    else would quietly open a second, empty jobs.db. The second breaks the moment
+    the package is installed somewhere other than a clone.
     """
     override = os.environ.get("SCREENER_HOME")
     if override:
         return Path(override).expanduser().resolve()
+    if os.name == "nt" and os.environ.get("APPDATA"):
+        return Path(os.environ["APPDATA"]) / APP_NAME
+    base = os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config"
+    return Path(base) / APP_NAME
 
-    # Walking up covers running from a subfolder of the project.
-    start = Path.cwd().resolve()
-    for candidate in (start, *start.parents):
-        if (candidate / FILTERS_FILE).is_file():
-            return candidate
 
-    # An editable install leaves the package inside the project, so its parent is
-    # the root. This is what makes `screener` work from anywhere on the machine.
-    packaged = Path(__file__).resolve().parent.parent
-    if (packaged / FILTERS_FILE).is_file():
-        return packaged
-
-    raise ProjectRootNotFound(
-        f"couldn't find {FILTERS_FILE} in {start} or any parent. "
-        f"Run from the project folder, or set SCREENER_HOME to it."
-    )
+def home() -> Path:
+    """The home folder, once `screener init` has set it up."""
+    path = user_home()
+    if not (path / FILTERS_FILE).is_file():
+        raise HomeNotFound(f'no config in {path}; run "screener init" to create it')
+    return path
 
 
 @dataclass(frozen=True)

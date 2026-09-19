@@ -8,7 +8,7 @@ import pytest
 
 from screener.config import load_filters, load_searches
 
-ROOT = Path(__file__).parent
+DEFAULTS = Path(__file__).parent / "screener" / "defaults"
 
 
 @pytest.fixture(scope="session")
@@ -16,8 +16,8 @@ def config():
     """The real filters.toml and searches.toml, not fixture copies.
 
     The point of these tests is to catch a tuning mistake in the shipped config,
-    not just a bug in the matching code, so they run against the same files the
-    CLI reads. searches.toml is part of it: the titles widen the gate and the
-    locations decide what the location rule keeps.
+    not just a bug in the matching code, so they run against the defaults that
+    `screener init` gives every new user. searches.toml is part of it: the
+    titles widen the gate and the locations decide what the location rule keeps.
     """
-    return load_filters(ROOT / "filters.toml", load_searches(ROOT / "searches.toml"))
+    return load_filters(DEFAULTS / "filters.toml", load_searches(DEFAULTS / "searches.toml"))
