@@ -105,7 +105,7 @@ screener list                       # unreviewed pass/maybe jobs, main market
 screener list --status maybe --flag contract
 screener list --market secondary    # the secondary-market watchlist
 screener show <id>                  # full posting, works on killed rows too
-screener mark <id> saved|applied|rejected|ignored|expired|new
+screener mark <id> saved|applied|rejected|tossed|expired|new
 screener export --open              # saved jobs as a page of clickable links
 screener export --format csv        # same, as a spreadsheet
 
@@ -123,10 +123,10 @@ screener refilter                   # apply it; your marks are never changed
 ## Configuring
 
 The config is two TOML files in your home folder (`screener home`), and
-they're commented throughout. The commands
-above edit them for you and leave the comments intact, or you can edit them by
-hand. Either way, a change reaches new jobs on the next pull. Run
-`screener refilter` to apply it to jobs you already have.
+they're commented throughout. The commands above edit them for you and leave
+the comments intact, or you can edit them by hand. Either way, a change reaches
+new jobs on the next pull. Run `screener refilter` to apply it to jobs you
+already have.
 
 ### Titles
 

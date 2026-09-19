@@ -21,6 +21,9 @@ app = typer.Typer(add_completion=False, help="Pull IT job postings, kill the noi
 # means the posting itself is gone, which is worth recording rather than
 # deleting: a role that is pulled and relisted is the pattern worth seeing.
 MARKS = ("new", "saved", "applied", "rejected", "ignored", "expired")
+# `review` calls its `t` key "toss" and writes `ignored`, so the word on the
+# review screen has to work everywhere a mark is typed.
+MARK_ALIASES = {"tossed": "ignored", "toss": "ignored"}
 VERDICTS = ("pass", "maybe", "fail")
 
 # Widths sum to 75; five single-space separators bring the row to exactly 80.
@@ -67,11 +70,12 @@ def pull(
 def list_jobs(
     status: str = typer.Option(None, "--status", help="Screening verdict: pass | maybe | fail."),
     flag: str = typer.Option(None, "--flag", help="Only jobs carrying this flag, e.g. contract."),
-    marked: str = typer.Option("new", "--marked", help="Review state: new | saved | applied | rejected | ignored | all."),
+    marked: str = typer.Option("new", "--marked", help="Review state: new | saved | applied | rejected | tossed | expired | all."),
     market: str = typer.Option("primary", "--market", help="primary | secondary | all."),
     limit: int = typer.Option(50, "--limit"),
 ) -> None:
     """The review queue. Defaults to unreviewed pass/maybe roles in the main market."""
+    marked = _mark(marked, allow_all=True)
     conn = _open_db()
     rows = db.list_jobs(
         conn,
@@ -112,6 +116,7 @@ def review(
     market: str = typer.Option("primary", "--market", help="primary | secondary | all."),
 ) -> None:
     """Step through the queue one job at a time: toss it, save it, or read deeper."""
+    marked = _mark(marked, allow_all=True)
     conn = _open_db()
     rows = db.list_jobs(
         conn,
@@ -130,18 +135,16 @@ def review(
 @app.command()
 def mark(
     job_id: int = typer.Argument(..., metavar="ID"),
-    state: str = typer.Argument(..., metavar="STATE", help="saved | applied | rejected | ignored | expired | new"),
+    state: str = typer.Argument(..., metavar="STATE", help="saved | applied | rejected | tossed | expired | new"),
 ) -> None:
-    """Record what you did about a job."""
-    if state not in MARKS:
-        typer.secho(f"state must be one of: {', '.join(MARKS)}", fg=typer.colors.RED)
-        raise typer.Exit(code=1)
-
+    """Record what you did about a job. Any mark can be changed later, so a
+    saved job that turns out wrong can still be tossed."""
+    state = _mark(state)
     conn = _open_db()
     if not db.set_status(conn, job_id, state):
         typer.secho(f"no job with id {job_id}", fg=typer.colors.RED)
         raise typer.Exit(code=1)
-    typer.echo(f"{job_id} -> {state}")
+    typer.echo(f"{job_id} -> {'tossed' if state == 'ignored' else state}")
 
 
 @app.command("export")
@@ -154,10 +157,7 @@ def export_jobs(
     if file_format not in ("html", "csv"):
         typer.secho("format must be html or csv", fg=typer.colors.RED)
         raise typer.Exit(code=1)
-    if marked not in MARKS:
-        typer.secho(f"marked must be one of: {', '.join(MARKS)}", fg=typer.colors.RED)
-        raise typer.Exit(code=1)
-
+    marked = _mark(marked)
     conn = _open_db()
     # Every market: a saved LA role belongs on the list you apply from.
     rows = db.list_jobs(conn, status=marked, market="all", limit=10_000)
@@ -532,6 +532,18 @@ def _root() -> Path:
     except HomeNotFound as error:
         typer.secho(str(error), fg=typer.colors.RED)
         raise typer.Exit(code=1) from error
+
+
+def _mark(value: str, allow_all: bool = False) -> str:
+    """The stored mark for what was typed, "tossed" included. A typo stops
+    with the list of marks rather than quietly matching no jobs."""
+    value = value.strip().lower()
+    value = MARK_ALIASES.get(value, value)
+    if value in MARKS or (allow_all and value == "all"):
+        return value
+    choices = [m for m in MARKS if m != "ignored"] + ["tossed"] + (["all"] if allow_all else [])
+    typer.secho(f"mark must be one of: {', '.join(choices)}", fg=typer.colors.RED)
+    raise typer.Exit(code=1)
 
 
 def _cutoff(since: str) -> str:
